@@ -1,0 +1,28 @@
+{
+  "id": "kobar.screenshot-plugin",
+  "name": "Screenshot Studio",
+  "version": "1.0.0",
+  "description": "Port of the KoBar Screenshot feature. Multi-monitor support, region selection, and rich annotations.",
+  "author": "KoBar",
+  "entry": "dist/index.js",
+  "icon": "camera",
+  "categories": [
+    "Utility",
+    "Productivity"
+  ],
+  "isBeta": false,
+  "githubRepo": "Kobar-Project/Screenshot-plugin",
+  "languages": [
+    "en",
+    "tr",
+    "de",
+    "es",
+    "fr",
+    "ru",
+    "ar",
+    "zh",
+    "ja",
+    "hi"
+  ],
+  "versionNote": "Initial Release as Plugin"
+}
