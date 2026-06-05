@@ -7,13 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 async function runBuild() {
   await build({
     root: __dirname,
-    define: {
-      'process.env.NODE_ENV': '"production"',
-    },
     build: {
       lib: {
-        entry: path.resolve(__dirname, 'src/index.jsx'),
-        name: 'KoBarPlugin',
+        entry: path.resolve(__dirname, 'src/index.tsx'),
+        name: 'ScreenshotStudioPlugin',
         formats: ['iife'],
         fileName: () => 'index.js'
       },

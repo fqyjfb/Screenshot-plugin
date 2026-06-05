@@ -1,130 +1,83 @@
-import { create } from 'zustand';
-
-// ─── Types ────────────────────────────────────────────────────────
-export type CaptureMode = 'region' | 'window' | 'fullscreen';
-
-export type AnnotationTool = 'select' | 'pen' | 'highlighter' | 'text' | 'arrow' | 'rect' | 'circle';
-
-export interface RegionSelection {
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
+export interface CaptureData {
+    displayId: string;
+    bounds: { x: number; y: number; width: number; height: number };
+    scaleFactor: number;
+    imageDataUrl: string;
 }
 
-export interface AnnotationShape {
+export interface SelectionBox {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export interface TextAnnotation {
     id: string;
-    tool: AnnotationTool;
-    points?: number[];       // For pen/highlighter strokes
-    x?: number;
-    y?: number;
-    width?: number;
-    height?: number;
-    text?: string;
+    text: string;
+    x: number;
+    y: number;
     color: string;
-    strokeWidth: number;
-    opacity: number;
-    isFilled?: boolean;
-    fontFamily?: string;
+    sizeLevel: 1 | 2 | 3;
 }
 
-export type ScreenshotPhase = 'idle' | 'capturing' | 'selecting' | 'editing';
-
-export interface QuickSaveSlot {
-    label: string;
-    path: string;
-}
-
-// ─── Store ────────────────────────────────────────────────────────
-interface ScreenshotState {
-    // Phase Management
-    phase: ScreenshotPhase;
-    setPhase: (phase: ScreenshotPhase) => void;
-
-    // Display Bounds Mapping (KoBar 6000x4000 ghost window offset)
-    screenBounds: { width: number; height: number; x: number; y: number } | null;
-    setScreenBounds: (bounds: { width: number; height: number; x: number; y: number } | null) => void;
+export interface ScreenshotState {
+    isCapturing: boolean;
+    captures: CaptureData[];
     windowPosition: { x: number; y: number };
-    setWindowPosition: (pos: { x: number; y: number }) => void;
-
-    // Capture Source
-    captureMode: CaptureMode;
-    setCaptureMode: (mode: CaptureMode) => void;
-    capturedImageDataUrl: string;
-    setCapturedImageDataUrl: (url: string) => void;
-
-    // Region Selection
-    selection: RegionSelection | null;
-    setSelection: (sel: RegionSelection | null) => void;
-
-    // Annotation Tools
-    activeTool: AnnotationTool;
-    setActiveTool: (tool: AnnotationTool) => void;
-    activeColor: string;
-    setActiveColor: (color: string) => void;
-    activeStrokeWidth: number;
-    setActiveStrokeWidth: (w: number) => void;
-    annotations: AnnotationShape[];
-    addAnnotation: (shape: AnnotationShape) => void;
-    updateAnnotation: (id: string, updates: Partial<AnnotationShape>) => void;
-    bringToFront: (id: string) => void;
-    removeAnnotation: (id: string) => void;
-    clearAnnotations: () => void;
-
-    // Export Settings
-    exportFormat: 'png' | 'jpg' | 'webp';
-    setExportFormat: (format: 'png' | 'jpg' | 'webp') => void;
-    quickSaveSlots: QuickSaveSlot[];
-    setQuickSaveSlots: (slots: QuickSaveSlot[]) => void;
-
-    // Reset
-    resetScreenshot: () => void;
+    selectionBox: SelectionBox | null;
+    activeTool: 'select' | 'pen' | 'rect' | 'arrow' | 'text';
+    color: string;
+    sizeLevel: 1 | 2 | 3;
+    texts: TextAnnotation[];
+    activeTextId: string | null;
 }
 
-const initialState = {
-    phase: 'idle' as ScreenshotPhase,
-    screenBounds: null as { width: number; height: number; x: number; y: number } | null,
+const { React } = window as any;
+
+let listeners: any[] = [];
+let state: ScreenshotState = {
+    isCapturing: false,
+    captures: [],
     windowPosition: { x: 0, y: 0 },
-    captureMode: 'region' as CaptureMode,
-    capturedImageDataUrl: '',
-    selection: null as RegionSelection | null,
-    activeTool: 'select' as AnnotationTool,
-    activeColor: '#ff3366',
-    activeStrokeWidth: 3,
-    annotations: [] as AnnotationShape[],
-    exportFormat: 'png' as 'png' | 'jpg' | 'webp',
-    quickSaveSlots: [] as QuickSaveSlot[],
+    selectionBox: null,
+    activeTool: 'select',
+    color: '#f4a125', // KoBar primary theme fallback
+    sizeLevel: 2,
+    texts: [],
+    activeTextId: null
 };
 
-export const useScreenshotStore = create<ScreenshotState>((set) => ({
-    ...initialState,
+export const getScreenshotState = () => state;
 
-    setPhase: (phase) => set({ phase }),
-    setScreenBounds: (screenBounds) => set({ screenBounds }),
-    setWindowPosition: (windowPosition) => set({ windowPosition }),
-    setCaptureMode: (captureMode) => set({ captureMode }),
-    setCapturedImageDataUrl: (url) => set({ capturedImageDataUrl: url }),
-    setSelection: (selection) => set({ selection }),
-    setActiveTool: (activeTool) => set({ activeTool }),
-    setActiveColor: (activeColor) => set({ activeColor }),
-    setActiveStrokeWidth: (activeStrokeWidth) => set({ activeStrokeWidth }),
+export const setScreenshotState = (newState: Partial<ScreenshotState>) => {
+    state = { ...state, ...newState };
+    listeners.forEach(l => l(state));
+};
 
-    addAnnotation: (shape) => set((s) => ({ annotations: [...s.annotations, shape] })),
-    updateAnnotation: (id, updates) => set((s) => ({
-        annotations: s.annotations.map(a => a.id === id ? { ...a, ...updates } : a)
-    })),
-    bringToFront: (id) => set((s) => {
-        const item = s.annotations.find(a => a.id === id);
-        if (!item) return s;
-        return {
-            annotations: [...s.annotations.filter(a => a.id !== id), item]
+export const updateColor = (newColor: string) => {
+    const updates: Partial<ScreenshotState> = { color: newColor };
+    if (state.activeTextId) {
+        updates.texts = state.texts.map(t => t.id === state.activeTextId ? { ...t, color: newColor } : t);
+    }
+    setScreenshotState(updates);
+};
+
+export const updateSizeLevel = (newSize: 1 | 2 | 3) => {
+    const updates: Partial<ScreenshotState> = { sizeLevel: newSize };
+    if (state.activeTextId) {
+        updates.texts = state.texts.map(t => t.id === state.activeTextId ? { ...t, sizeLevel: newSize } : t);
+    }
+    setScreenshotState(updates);
+};
+
+export const useScreenshotStore = () => {
+    const [snap, setSnap] = React.useState(state);
+    React.useEffect(() => {
+        listeners.push(setSnap);
+        return () => {
+            listeners = listeners.filter(l => l !== setSnap);
         };
-    }),
-    removeAnnotation: (id) => set((s) => ({ annotations: s.annotations.filter(a => a.id !== id) })),
-    clearAnnotations: () => set({ annotations: [] }),
-
-    setExportFormat: (exportFormat) => set({ exportFormat }),
-    setQuickSaveSlots: (quickSaveSlots) => set({ quickSaveSlots }),
-
-    resetScreenshot: () => set({ ...initialState }),
-}));
+    }, []);
+    return snap;
+};
