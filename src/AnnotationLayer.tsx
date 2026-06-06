@@ -187,7 +187,8 @@ export const AnnotationLayer = ({ backgroundCanvasRef }: { backgroundCanvasRef: 
             api.copyScreenshotToClipboard(dataUrl);
             api.sendNotification('Screenshot Copied', 'Saved to clipboard.');
         } else {
-            const res = await api.saveScreenshot({ buffer: dataUrl, format: 'png' });
+            const defaultPath = localStorage.getItem('kobar_screenshot_save_path') || undefined;
+            const res = await api.saveScreenshot({ buffer: dataUrl, format: 'png', defaultPath });
             if (res.success) {
                 api.sendNotification('Screenshot Saved', `Saved to ${res.path}`);
             }

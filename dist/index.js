@@ -1,4 +1,4 @@
-(function() {
+(function(react) {
   "use strict";
   const { React: React$3 } = window;
   let listeners = [];
@@ -298,7 +298,8 @@
         api$2.copyScreenshotToClipboard(dataUrl);
         api$2.sendNotification("Screenshot Copied", "Saved to clipboard.");
       } else {
-        const res = await api$2.saveScreenshot({ buffer: dataUrl, format: "png" });
+        const defaultPath = localStorage.getItem("kobar_screenshot_save_path") || void 0;
+        const res = await api$2.saveScreenshot({ buffer: dataUrl, format: "png", defaultPath });
         if (res.success) {
           api$2.sendNotification("Screenshot Saved", `Saved to ${res.path}`);
         }
@@ -491,7 +492,35 @@
       selectionBox && /* @__PURE__ */ window.React.createElement(Toolbar, null)
     );
   };
+  const SettingsPanel = () => {
+    const [savePath, setSavePath] = react.useState("");
+    react.useEffect(() => {
+      const storedPath = localStorage.getItem("kobar_screenshot_save_path") || "";
+      setSavePath(storedPath);
+    }, []);
+    const handleChange = (e) => {
+      const val = e.target.value;
+      setSavePath(val);
+      localStorage.setItem("kobar_screenshot_save_path", val);
+    };
+    return /* @__PURE__ */ window.React.createElement("div", { className: "flex flex-col gap-4 p-4 text-slate-300" }, /* @__PURE__ */ window.React.createElement("div", null, /* @__PURE__ */ window.React.createElement("h3", { className: "text-sm font-bold text-slate-200 mb-1" }, "Default Save Location"), /* @__PURE__ */ window.React.createElement("p", { className: "text-xs text-slate-400 mb-3" }, "Specify the default directory path where screenshots will be saved. Leave empty to use your Desktop."), /* @__PURE__ */ window.React.createElement(
+      "input",
+      {
+        type: "text",
+        value: savePath,
+        onChange: handleChange,
+        placeholder: "e.g. C:\\Users\\Username\\Pictures\\Screenshots",
+        className: "w-full bg-black/20 border border-white/10 rounded-md px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-primary/50 transition-colors"
+      }
+    )));
+  };
   const { React, KoBarExtensions, api, useAppStore } = window;
+  if (KoBarExtensions.registerSettingsPanel) {
+    KoBarExtensions.registerSettingsPanel("screenshot-studio-overlay", {
+      id: "screenshot-studio-overlay",
+      render: () => React.createElement(SettingsPanel)
+    });
+  }
   KoBarExtensions.registerSidebarButton({
     id: "screenshot-studio-btn",
     icon: "screenshot_region",
@@ -528,4 +557,4 @@
       return React.createElement(ScreenshotOverlay);
     }
   });
-})();
+})(window.React);

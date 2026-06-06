@@ -1,7 +1,15 @@
 import { setScreenshotState } from './useScreenshotStore';
 import { ScreenshotOverlay } from './ScreenshotOverlay';
+import { SettingsPanel } from './SettingsPanel';
 
 const { React, KoBarExtensions, api, useAppStore } = window as any;
+
+if (KoBarExtensions.registerSettingsPanel) {
+    KoBarExtensions.registerSettingsPanel('screenshot-studio-overlay', {
+        id: 'screenshot-studio-overlay',
+        render: () => React.createElement(SettingsPanel)
+    });
+}
 
 KoBarExtensions.registerSidebarButton({
     id: 'screenshot-studio-btn',
