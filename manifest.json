@@ -6,11 +6,11 @@
   "author": "ToolBox Team",
   "entry": "dist/index.js",
   "icon": "Camera",
-  "iconUrl": "https://raw.githubusercontent.com/fqyjfb/toolbox-plugins-registry/main/plugin-screenshot/icon.png",
+  "iconUrl": "https://raw.githubusercontent.com/fqyjfb/toolbox-plugins-registry/main/icons/screenshot-plugin/icon.png",
   "color": "#3b82f6",
   "textColor": "#ffffff",
   "categories": ["工具"],
   "tags": ["screenshot", "capture", "annotation"],
-  "githubRepo": "fqyjfb/toolbox-plugin-screenshot",
+  "githubRepo": "fqyjfb/Screenshot-plugin",
   "isBeta": false
 }
