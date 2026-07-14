@@ -1,134 +1,149 @@
-import { useScreenshotStore, setScreenshotState } from './useScreenshotStore';
+import { useEffect, useRef, useCallback } from 'react';
+import { useScreenshotStore, setScreenshotState, addText, updateText } from './useScreenshotStore';
 import { Toolbar } from './Toolbar';
 import { AnnotationLayer } from './AnnotationLayer';
 
-const { React, api } = window as any;
-
 export const ScreenshotOverlay = () => {
-    const { captures, windowPosition, selectionBox } = useScreenshotStore();
-    const [isDragging, setIsDragging] = React.useState(false);
-    const [dragStart, setDragStart] = React.useState(null as { x: number; y: number } | null);
-    const [dragCurrent, setDragCurrent] = React.useState(null as { x: number; y: number } | null);
+    const { captures, selectionBox, activeTool, texts, activeTextId } = useScreenshotStore();
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    const canvasRef = React.useRef(null as HTMLCanvasElement | null);
-    const dimLayerRef = React.useRef(null as HTMLCanvasElement | null);
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !captures || captures.length === 0) return;
 
-    React.useEffect(() => {
-        // Draw all captures onto the background canvas
-        if (!canvasRef.current || captures.length === 0) return;
-        const ctx = canvasRef.current.getContext('2d');
+        const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Ensure canvas is large enough
-        canvasRef.current.width = window.innerWidth;
-        canvasRef.current.height = window.innerHeight;
+        const totalWidth = captures.reduce((max, c) => Math.max(max, c.x + c.width), 0);
+        const totalHeight = captures.reduce((max, c) => Math.max(max, c.y + c.height), 0);
 
-        captures.forEach((capture: any) => {
+        canvas.width = totalWidth;
+        canvas.height = totalHeight;
+
+        captures.forEach(capture => {
             const img = new Image();
             img.onload = () => {
-                // Calculate physical coordinates inside the ghost window
-                const x = capture.bounds.x - windowPosition.x;
-                const y = capture.bounds.y - windowPosition.y;
-                ctx.drawImage(img, x, y, capture.bounds.width, capture.bounds.height);
+                ctx.drawImage(img, capture.x, capture.y);
             };
-            img.src = capture.imageDataUrl;
+            img.src = capture.dataUrl;
         });
-    }, [captures, windowPosition]);
+    }, [captures]);
 
-    React.useEffect(() => {
-        // Draw the dim layer and the cut-out hole
-        if (!dimLayerRef.current) return;
-        const ctx = dimLayerRef.current.getContext('2d');
-        if (!ctx) return;
-
-        dimLayerRef.current.width = window.innerWidth;
-        dimLayerRef.current.height = window.innerHeight;
-
-        ctx.clearRect(0, 0, dimLayerRef.current.width, dimLayerRef.current.height);
-
-        // Fill with semi-transparent black
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(0, 0, dimLayerRef.current.width, dimLayerRef.current.height);
-
-        // Cut out the selection box
-        const box = selectionBox || (dragStart && dragCurrent ? {
-            x: Math.min(dragStart.x, dragCurrent.x),
-            y: Math.min(dragStart.y, dragCurrent.y),
-            width: Math.abs(dragCurrent.x - dragStart.x),
-            height: Math.abs(dragCurrent.y - dragStart.y)
-        } : null);
-
-        if (box) {
-            ctx.clearRect(box.x, box.y, box.width, box.height);
-            // Draw a bright border
-            ctx.strokeStyle = '#f4a125'; // KoBar primary color
-            ctx.lineWidth = 2;
-            ctx.strokeRect(box.x, box.y, box.width, box.height);
-        }
-    }, [selectionBox, dragStart, dragCurrent]);
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (selectionBox) return; // Already selected, wait for them to clear or draw
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-        setDragCurrent({ x: e.clientX, y: e.clientY });
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging || !dragStart) return;
-        setDragCurrent({ x: e.clientX, y: e.clientY });
-    };
-
-    const handleMouseUp = () => {
-        if (!isDragging || !dragStart || !dragCurrent) return;
-        setIsDragging(false);
-        const width = Math.abs(dragCurrent.x - dragStart.x);
-        const height = Math.abs(dragCurrent.y - dragStart.y);
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (!canvasRef.current) return;
         
-        if (width > 10 && height > 10) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (activeTool === 'text') {
+            const newText = {
+                id: `text-${Date.now()}`,
+                x,
+                y,
+                content: '',
+                color: '#ffffff',
+                fontSize: 14,
+                isEditing: true
+            };
+            addText(newText);
+        } else if (activeTool === 'select') {
+            setScreenshotState({
+                selectionBox: { x, y, width: 0, height: 0, isDrawing: true, startX: x, startY: y }
+            });
+        }
+    }, [activeTool]);
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!canvasRef.current) return;
+        
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (selectionBox?.isDrawing) {
+            const newWidth = x - selectionBox.startX;
+            const newHeight = y - selectionBox.startY;
             setScreenshotState({
                 selectionBox: {
-                    x: Math.min(dragStart.x, dragCurrent.x),
-                    y: Math.min(dragStart.y, dragCurrent.y),
-                    width,
-                    height
+                    ...selectionBox,
+                    x: newWidth < 0 ? x : selectionBox.startX,
+                    y: newHeight < 0 ? y : selectionBox.startY,
+                    width: Math.abs(newWidth),
+                    height: Math.abs(newHeight),
+                    isDrawing: true
                 }
             });
         }
-        setDragStart(null);
-        setDragCurrent(null);
-    };
+    }, [selectionBox]);
 
-    React.useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                api.cancelScreenshot();
-                setScreenshotState({ selectionBox: null, texts: [], activeTextId: null });
-                (window as any).useAppStore.setState({ activeExtensionPanelId: null });
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+    const handleMouseUp = useCallback(() => {
+        if (selectionBox?.isDrawing) {
+            setScreenshotState({
+                selectionBox: {
+                    ...selectionBox,
+                    isDrawing: false
+                }
+            });
+        }
+    }, [selectionBox]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            setScreenshotState({ selectionBox: null, texts: [], activeTextId: null });
+        }
+    }, []);
+
+    useEffect(() => {
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [handleKeyDown]);
+
+    const handleTextInput = useCallback((id: string, content: string) => {
+        updateText(id, { content });
+    }, []);
+
+    const handleTextBlur = useCallback((id: string) => {
+        updateText(id, { isEditing: false });
     }, []);
 
     return (
-        <div 
-            className="fixed inset-0 z-[999999] pointer-events-auto cursor-crosshair no-drag-region"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            style={{ width: '100vw', height: '100vh', backgroundColor: 'transparent' }}
-        >
-            <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
-            <canvas ref={dimLayerRef} className="absolute inset-0 pointer-events-none" />
+        <div className="fixed inset-0 z-50 overflow-hidden" ref={containerRef}>
+            <div className="absolute inset-0 bg-black/40" />
+            
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="relative">
+                    <canvas
+                        ref={canvasRef}
+                        className="block cursor-crosshair rounded-md"
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                    />
+                    
+                    {selectionBox && (
+                        <div
+                            className="absolute border-2 border-blue-500 rounded-sm pointer-events-none"
+                            style={{
+                                left: selectionBox.x,
+                                top: selectionBox.y,
+                                width: selectionBox.width,
+                                height: selectionBox.height
+                            }}
+                        />
+                    )}
 
-            {selectionBox && (
-                <AnnotationLayer backgroundCanvasRef={canvasRef} />
-            )}
+                    <AnnotationLayer 
+                        texts={texts}
+                        onTextInput={handleTextInput}
+                        onTextBlur={handleTextBlur}
+                    />
 
-            {selectionBox && (
-                <Toolbar />
-            )}
+                    <Toolbar />
+                </div>
+            </div>
         </div>
     );
 };

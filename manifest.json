@@ -1,21 +1,16 @@
 {
-  "id": "screenshot-studio-overlay",
-  "name": "Screenshot Studio",
-  "version": "1.0.2",
-  "description": "Native multi-monitor screenshot capture, annotation, and cropping tool for KoBar.",
-  "author": "KoBar Team",
+  "id": "plugin-screenshot",
+  "name": "截图工具",
+  "version": "1.0.0",
+  "description": "原生多显示器截图捕获、标注和裁剪工具",
+  "author": "ToolBox Team",
   "entry": "dist/index.js",
-  "icon": "screenshot_region",
-  "categories": [
-    "Productivity",
-    "Utility"
-  ],
-  "isBeta": false,
-  "versionNote": "Updated plugin images.",
-  "image": "https://raw.githubusercontent.com/Kobar-Project/KoBar-Assets/main/Plugins%20images/ScreenShot/screenshot.png",
-  "storeImage": [
-    "https://raw.githubusercontent.com/Kobar-Project/KoBar-Assets/main/Plugins%20images/ScreenShot/Screenshot1.png",
-    "https://raw.githubusercontent.com/Kobar-Project/KoBar-Assets/main/Plugins%20images/ScreenShot/Screenshot2.png"
-  ],
-  "apiVersion": "1.0.0"
+  "icon": "Camera",
+  "iconUrl": "https://raw.githubusercontent.com/fqyjfb/toolbox-plugins-registry/main/plugin-screenshot/icon.png",
+  "color": "#3b82f6",
+  "textColor": "#ffffff",
+  "categories": ["工具"],
+  "tags": ["screenshot", "capture", "annotation"],
+  "githubRepo": "fqyjfb/toolbox-plugin-screenshot",
+  "isBeta": false
 }
