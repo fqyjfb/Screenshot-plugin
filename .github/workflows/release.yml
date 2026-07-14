@@ -31,7 +31,7 @@ jobs:
         run: zip -r plugin-screenshot.zip dist manifest.json
 
       - name: Create Release
-        uses: ncipollo/release-action@v14
+        uses: ncipollo/release-action@v1
         with:
           name: Release ${{ github.ref_name }}
           tag: ${{ github.ref_name }}
