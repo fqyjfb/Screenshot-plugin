@@ -392,9 +392,55 @@
     )));
   };
   const { React, api } = window;
+  const ToolPanel = () => {
+    return React.createElement(
+      "div",
+      { className: "h-full flex flex-col" },
+      React.createElement(
+        "div",
+        { className: "p-4 border-b bg-gray-50" },
+        React.createElement("h2", { className: "text-lg font-semibold text-gray-800" }, "截图工具"),
+        React.createElement("p", { className: "text-sm text-gray-500 mt-1" }, "点击下方按钮开始截图")
+      ),
+      React.createElement(
+        "div",
+        { className: "flex-1 flex items-center justify-center" },
+        React.createElement(
+          "button",
+          {
+            onClick: async () => {
+              var _a;
+              try {
+                const data = await ((_a = api.startScreenshotCapture) == null ? void 0 : _a.call(api));
+                if (data && data.captures && data.captures.length > 0) {
+                  setScreenshotState({
+                    isCapturing: true,
+                    captures: data.captures,
+                    windowPosition: data.windowPosition,
+                    selectionBox: null,
+                    texts: [],
+                    activeTextId: null,
+                    activeTool: "select"
+                  });
+                  registerPanel("plugin-screenshot-overlay", {
+                    id: "plugin-screenshot-overlay",
+                    render: () => React.createElement(ScreenshotOverlay)
+                  });
+                }
+              } catch (error) {
+                console.error("Screenshot capture failed:", error);
+              }
+            },
+            className: "px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          },
+          React.createElement("span", null, "开始截图")
+        )
+      )
+    );
+  };
   module.exports = {
     register: function(toolboxApi) {
-      const { registerTool, registerSidebarButton, registerPanel } = toolboxApi;
+      const { registerTool, registerSidebarButton, registerPanel: registerPanel2 } = toolboxApi;
       registerTool({
         id: "plugin-screenshot",
         name: "截图工具",
@@ -402,7 +448,7 @@
         color: "#3b82f6",
         textColor: "#ffffff",
         path: "/tools/plugin-screenshot",
-        component: require("./src/components/ToolPanel").default
+        component: ToolPanel
       });
       registerSidebarButton({
         id: "plugin-screenshot-btn",
@@ -422,7 +468,7 @@
                 activeTextId: null,
                 activeTool: "select"
               });
-              registerPanel("plugin-screenshot-overlay", {
+              registerPanel2("plugin-screenshot-overlay", {
                 id: "plugin-screenshot-overlay",
                 render: () => React.createElement(ScreenshotOverlay)
               });
