@@ -100,6 +100,44 @@ export const ScreenshotOverlay = () => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 
+    useEffect(() => {
+        const handleScreenshotAction = async (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            let dataUrl: string;
+
+            if (selectionBox && selectionBox.width > 0 && selectionBox.height > 0) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = selectionBox.width;
+                tempCanvas.height = selectionBox.height;
+                const ctx = tempCanvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(canvas, selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height, 0, 0, selectionBox.width, selectionBox.height);
+                    dataUrl = tempCanvas.toDataURL('image/png');
+                } else {
+                    dataUrl = canvas.toDataURL('image/png');
+                }
+            } else {
+                dataUrl = canvas.toDataURL('image/png');
+            }
+
+            const electron = (window as any).electron;
+
+            if (detail === 'copy') {
+                electron?.screenshot?.copyToClipboard?.(dataUrl);
+                setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
+            } else if (detail === 'save') {
+                await electron?.screenshot?.save?.({ buffer: dataUrl, format: 'png' });
+                setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
+            }
+        };
+
+        document.addEventListener('screenshot-action', handleScreenshotAction);
+        return () => document.removeEventListener('screenshot-action', handleScreenshotAction);
+    }, [selectionBox]);
+
     const handleTextInput = useCallback((id: string, content: string) => {
         updateText(id, { content });
     }, []);

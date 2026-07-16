@@ -1,9 +1,7 @@
-import { setScreenshotState } from './useScreenshotStore';
+import { setScreenshotState, useScreenshotStore } from './useScreenshotStore';
 import { ScreenshotOverlay } from './ScreenshotOverlay';
-import { SettingsPanel } from './SettingsPanel';
-import { Toolbar } from './Toolbar';
 
-const { React, ReactDOM, api } = window as any;
+const { React, ReactDOM } = window as any;
 
 const PluginHeader: React.FC<{ title: string }> = ({ title }) => {
   const handleMinimize = () => {
@@ -50,7 +48,8 @@ const ToolPanel = () => {
       React.createElement('button', {
         onClick: async () => {
           try {
-            const data = await api.startScreenshotCapture?.();
+            const electron = (window as any).electron;
+            const data = await electron?.screenshot?.startCapture?.();
             if (data && data.captures && data.captures.length > 0) {
               setScreenshotState({
                 isCapturing: true,
@@ -60,10 +59,6 @@ const ToolPanel = () => {
                 texts: [],
                 activeTextId: null,
                 activeTool: 'select'
-              });
-              registerPanel('plugin-screenshot-overlay', {
-                id: 'plugin-screenshot-overlay',
-                render: () => React.createElement(ScreenshotOverlay)
               });
             }
           } catch (error) {
@@ -81,6 +76,11 @@ const ToolPanel = () => {
 const PluginApp: React.FC = () => {
   const pluginData = (window as any).__PLUGIN_DATA__;
   const title = pluginData?.pluginName || '截图工具';
+  const { isCapturing } = useScreenshotStore();
+
+  if (isCapturing) {
+    return React.createElement(ScreenshotOverlay);
+  }
 
   return React.createElement(React.Fragment, null,
     React.createElement(PluginHeader, { title }),
@@ -110,7 +110,7 @@ function renderStandalone() {
 }
 
 function registerPlugin(toolboxApi: any) {
-  const { registerTool, registerSidebarButton, registerPanel, openPluginWindow } = toolboxApi;
+  const { registerTool, registerSidebarButton, openPluginWindow } = toolboxApi;
 
   registerTool({
     id: 'plugin-screenshot',
@@ -130,13 +130,6 @@ function registerPlugin(toolboxApi: any) {
       openPluginWindow?.('plugin-screenshot');
     }
   });
-
-  if (api.registerSettingsPanel) {
-    api.registerSettingsPanel('plugin-screenshot', {
-      id: 'plugin-screenshot',
-      render: () => React.createElement(SettingsPanel)
-    });
-  }
 }
 
 const pluginData = (window as any).__PLUGIN_DATA__;

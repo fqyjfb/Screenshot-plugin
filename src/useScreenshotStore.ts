@@ -54,6 +54,8 @@ let state: ScreenshotState = {
 
 export const getScreenshotState = () => state;
 
+(window as any).getScreenshotState = getScreenshotState;
+
 export const setScreenshotState = (newState: Partial<ScreenshotState>) => {
     state = { ...state, ...newState };
     listeners.forEach(l => l(state));

@@ -13,6 +13,8 @@
     texts: [],
     activeTextId: null
   };
+  const getScreenshotState = () => state;
+  window.getScreenshotState = getScreenshotState;
   const setScreenshotState = (newState) => {
     state = { ...state, ...newState };
     listeners.forEach((l) => l(state));
@@ -59,7 +61,6 @@
     }, []);
     return snap;
   };
-  const { api: api$1, useAppStore } = window;
   const Toolbar = () => {
     const { selectionBox, activeTool, color, sizeLevel } = useScreenshotStore();
     if (!selectionBox) return null;
@@ -85,9 +86,10 @@
       setScreenshotState({ selectionBox: null, texts: [], activeTextId: null });
     };
     const handleExit = () => {
-      var _a, _b, _c, _d;
-      (_a = api$1.cancelScreenshot) == null ? void 0 : _a.call(api$1);
-      (_d = (_c = (_b = useAppStore == null ? void 0 : useAppStore.getState) == null ? void 0 : _b.call(useAppStore)) == null ? void 0 : _c.setState) == null ? void 0 : _d.call(_c, { activeExtensionPanelId: null });
+      var _a, _b;
+      const electron = window.electron;
+      (_b = (_a = electron == null ? void 0 : electron.screenshot) == null ? void 0 : _a.cancel) == null ? void 0 : _b.call(_a);
+      setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
     };
     const renderIcon = (iconName) => {
       const iconPaths = {
@@ -282,6 +284,39 @@
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
+    react.useEffect(() => {
+      const handleScreenshotAction = async (e) => {
+        var _a, _b, _c, _d;
+        const detail = e.detail;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        let dataUrl;
+        if (selectionBox && selectionBox.width > 0 && selectionBox.height > 0) {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = selectionBox.width;
+          tempCanvas.height = selectionBox.height;
+          const ctx = tempCanvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(canvas, selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height, 0, 0, selectionBox.width, selectionBox.height);
+            dataUrl = tempCanvas.toDataURL("image/png");
+          } else {
+            dataUrl = canvas.toDataURL("image/png");
+          }
+        } else {
+          dataUrl = canvas.toDataURL("image/png");
+        }
+        const electron = window.electron;
+        if (detail === "copy") {
+          (_b = (_a = electron == null ? void 0 : electron.screenshot) == null ? void 0 : _a.copyToClipboard) == null ? void 0 : _b.call(_a, dataUrl);
+          setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
+        } else if (detail === "save") {
+          await ((_d = (_c = electron == null ? void 0 : electron.screenshot) == null ? void 0 : _c.save) == null ? void 0 : _d.call(_c, { buffer: dataUrl, format: "png" }));
+          setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
+        }
+      };
+      document.addEventListener("screenshot-action", handleScreenshotAction);
+      return () => document.removeEventListener("screenshot-action", handleScreenshotAction);
+    }, [selectionBox]);
     const handleTextInput = react.useCallback((id, content) => {
       updateText(id, { content });
     }, []);
@@ -318,80 +353,57 @@
       }
     ), /* @__PURE__ */ window.React.createElement(Toolbar, null))));
   };
-  const SettingsPanel = ({ pluginId }) => {
-    const [settings, setSettings] = react.useState({
-      defaultSavePath: "",
-      saveFormat: "png",
-      showCursor: true,
-      defaultSaveAction: "copy",
-      defaultFileName: "{YYYY}-{MM}-{DD}-{HH}-{mm}-{ss}"
-    });
-    react.useEffect(() => {
-      const savedSettings = localStorage.getItem("screenshot-settings");
-      if (savedSettings) {
-        try {
-          setSettings(JSON.parse(savedSettings));
-        } catch {
-        }
-      }
-    }, []);
-    const handleSave = () => {
-      localStorage.setItem("screenshot-settings", JSON.stringify(settings));
+  const { React, ReactDOM } = window;
+  const PluginHeader = ({ title }) => {
+    const handleMinimize = () => {
+      var _a, _b;
+      (_b = (_a = window.electron) == null ? void 0 : _a.plugin) == null ? void 0 : _b.minimizeWindow();
     };
-    const formats = ["png", "jpg", "webp"];
-    return /* @__PURE__ */ window.React.createElement("div", { className: "p-6" }, /* @__PURE__ */ window.React.createElement("div", { className: "mb-6" }, /* @__PURE__ */ window.React.createElement("h2", { className: "text-lg font-semibold text-gray-900 mb-1" }, "截图工具设置"), /* @__PURE__ */ window.React.createElement("p", { className: "text-sm text-gray-500" }, "配置截图工具的默认行为和保存选项")), /* @__PURE__ */ window.React.createElement("div", { className: "space-y-6" }, /* @__PURE__ */ window.React.createElement("div", null, /* @__PURE__ */ window.React.createElement("label", { className: "block text-sm font-medium text-gray-700 mb-2" }, "默认保存路径"), /* @__PURE__ */ window.React.createElement(
-      "input",
-      {
-        type: "text",
-        value: settings.defaultSavePath,
-        onChange: (e) => setSettings({ ...settings, defaultSavePath: e.target.value }),
-        className: "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-        placeholder: "留空则使用默认下载目录"
-      }
-    )), /* @__PURE__ */ window.React.createElement("div", null, /* @__PURE__ */ window.React.createElement("label", { className: "block text-sm font-medium text-gray-700 mb-2" }, "默认保存格式"), /* @__PURE__ */ window.React.createElement(
-      "select",
-      {
-        value: settings.saveFormat,
-        onChange: (e) => setSettings({ ...settings, saveFormat: e.target.value }),
-        className: "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-      },
-      formats.map((format) => /* @__PURE__ */ window.React.createElement("option", { key: format, value: format }, format.toUpperCase()))
-    )), /* @__PURE__ */ window.React.createElement("div", null, /* @__PURE__ */ window.React.createElement("label", { className: "block text-sm font-medium text-gray-700 mb-2" }, "默认保存操作"), /* @__PURE__ */ window.React.createElement(
-      "select",
-      {
-        value: settings.defaultSaveAction,
-        onChange: (e) => setSettings({ ...settings, defaultSaveAction: e.target.value }),
-        className: "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-      },
-      /* @__PURE__ */ window.React.createElement("option", { value: "copy" }, "仅复制到剪贴板"),
-      /* @__PURE__ */ window.React.createElement("option", { value: "save" }, "仅保存到文件"),
-      /* @__PURE__ */ window.React.createElement("option", { value: "both" }, "复制并保存")
-    )), /* @__PURE__ */ window.React.createElement("div", null, /* @__PURE__ */ window.React.createElement("label", { className: "block text-sm font-medium text-gray-700 mb-2" }, "文件名格式"), /* @__PURE__ */ window.React.createElement(
-      "input",
-      {
-        type: "text",
-        value: settings.defaultFileName,
-        onChange: (e) => setSettings({ ...settings, defaultFileName: e.target.value }),
-        className: "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-        placeholder: "{YYYY}-{MM}-{DD}-{HH}-{mm}-{ss}"
-      }
-    ), /* @__PURE__ */ window.React.createElement("p", { className: "mt-1 text-xs text-gray-500" }, "支持变量: ", YYYY, ", ", MM, ", ", DD, ", ", HH, ", ", mm, ", ", ss)), /* @__PURE__ */ window.React.createElement("div", { className: "flex items-center justify-between" }, /* @__PURE__ */ window.React.createElement("label", { className: "text-sm font-medium text-gray-700" }, "截图时显示鼠标光标"), /* @__PURE__ */ window.React.createElement(
-      "button",
-      {
-        onClick: () => setSettings({ ...settings, showCursor: !settings.showCursor }),
-        className: `relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settings.showCursor ? "bg-blue-600" : "bg-gray-300"}`
-      },
-      /* @__PURE__ */ window.React.createElement("span", { className: `inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${settings.showCursor ? "translate-x-5" : "translate-x-1"}` })
-    ))), /* @__PURE__ */ window.React.createElement("div", { className: "mt-8 flex justify-end" }, /* @__PURE__ */ window.React.createElement(
-      "button",
-      {
-        onClick: handleSave,
-        className: "px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-      },
-      "保存设置"
-    )));
+    const handleMaximize = () => {
+      var _a, _b;
+      (_b = (_a = window.electron) == null ? void 0 : _a.plugin) == null ? void 0 : _b.maximizeWindow();
+    };
+    const handleClose = () => {
+      var _a, _b;
+      (_b = (_a = window.electron) == null ? void 0 : _a.plugin) == null ? void 0 : _b.closeWindow();
+    };
+    return React.createElement(
+      "div",
+      { className: "plugin-header" },
+      React.createElement("div", { className: "plugin-header-title" }, title),
+      React.createElement(
+        "div",
+        { className: "plugin-header-controls" },
+        React.createElement(
+          "button",
+          { onClick: handleMinimize },
+          React.createElement(
+            "svg",
+            { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
+            React.createElement("path", { d: "M5 12h14" })
+          )
+        ),
+        React.createElement(
+          "button",
+          { onClick: handleMaximize },
+          React.createElement(
+            "svg",
+            { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
+            React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", ry: "2" })
+          )
+        ),
+        React.createElement(
+          "button",
+          { onClick: handleClose },
+          React.createElement(
+            "svg",
+            { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
+            React.createElement("path", { d: "M18 6L6 18M6 6l12 12" })
+          )
+        )
+      )
+    );
   };
-  const { React, api } = window;
   const ToolPanel = () => {
     return React.createElement(
       "div",
@@ -409,9 +421,10 @@
           "button",
           {
             onClick: async () => {
-              var _a;
+              var _a, _b;
               try {
-                const data = await ((_a = api.startScreenshotCapture) == null ? void 0 : _a.call(api));
+                const electron = window.electron;
+                const data = await ((_b = (_a = electron == null ? void 0 : electron.screenshot) == null ? void 0 : _a.startCapture) == null ? void 0 : _b.call(_a));
                 if (data && data.captures && data.captures.length > 0) {
                   setScreenshotState({
                     isCapturing: true,
@@ -421,10 +434,6 @@
                     texts: [],
                     activeTextId: null,
                     activeTool: "select"
-                  });
-                  registerPanel("plugin-screenshot-overlay", {
-                    id: "plugin-screenshot-overlay",
-                    render: () => React.createElement(ScreenshotOverlay)
                   });
                 }
               } catch (error) {
@@ -438,54 +447,65 @@
       )
     );
   };
-  module.exports = {
-    register: function(toolboxApi) {
-      const { registerTool, registerSidebarButton, registerPanel: registerPanel2 } = toolboxApi;
-      registerTool({
-        id: "plugin-screenshot",
-        name: "截图工具",
-        iconName: "Camera",
-        color: "#3b82f6",
-        textColor: "#ffffff",
-        path: "/tools/plugin-screenshot",
-        component: ToolPanel
-      });
-      registerSidebarButton({
-        id: "plugin-screenshot-btn",
-        icon: "Camera",
-        label: "截图工具",
-        onClick: async (e, anchorRect) => {
-          var _a;
-          try {
-            const data = await ((_a = api.startScreenshotCapture) == null ? void 0 : _a.call(api));
-            if (data && data.captures && data.captures.length > 0) {
-              setScreenshotState({
-                isCapturing: true,
-                captures: data.captures,
-                windowPosition: data.windowPosition,
-                selectionBox: null,
-                texts: [],
-                activeTextId: null,
-                activeTool: "select"
-              });
-              registerPanel2("plugin-screenshot-overlay", {
-                id: "plugin-screenshot-overlay",
-                render: () => React.createElement(ScreenshotOverlay)
-              });
-            } else if (data == null ? void 0 : data.error) {
-              console.warn("Screenshot capture error or denied:", data.error);
-            }
-          } catch (error) {
-            console.error("Screenshot capture failed:", error);
-          }
-        }
-      });
-      if (api.registerSettingsPanel) {
-        api.registerSettingsPanel("plugin-screenshot", {
-          id: "plugin-screenshot",
-          render: () => React.createElement(SettingsPanel)
-        });
-      }
+  const PluginApp = () => {
+    const pluginData2 = window.__PLUGIN_DATA__;
+    const title = (pluginData2 == null ? void 0 : pluginData2.pluginName) || "截图工具";
+    const { isCapturing } = useScreenshotStore();
+    if (isCapturing) {
+      return React.createElement(ScreenshotOverlay);
     }
+    return React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(PluginHeader, { title }),
+      React.createElement(
+        "div",
+        { className: "plugin-content" },
+        React.createElement(ToolPanel)
+      )
+    );
+  };
+  function renderStandalone() {
+    if (!React || !ReactDOM) {
+      console.error("React or ReactDOM is not available");
+      return;
+    }
+    const root = document.getElementById("root");
+    if (!root) {
+      console.error("Root element not found");
+      return;
+    }
+    if (ReactDOM.createRoot) {
+      ReactDOM.createRoot(root).render(React.createElement(PluginApp));
+    } else {
+      ReactDOM.render(React.createElement(PluginApp), root);
+    }
+  }
+  function registerPlugin(toolboxApi) {
+    const { registerTool, registerSidebarButton, openPluginWindow } = toolboxApi;
+    registerTool({
+      id: "plugin-screenshot",
+      name: "截图工具",
+      iconName: "Camera",
+      color: "#3b82f6",
+      textColor: "#ffffff",
+      path: "/tools/plugin-screenshot",
+      component: ToolPanel
+    });
+    registerSidebarButton({
+      id: "plugin-screenshot-btn",
+      icon: "Camera",
+      label: "截图工具",
+      onClick: () => {
+        openPluginWindow == null ? void 0 : openPluginWindow("plugin-screenshot");
+      }
+    });
+  }
+  const pluginData = window.__PLUGIN_DATA__;
+  if (pluginData) {
+    renderStandalone();
+  }
+  module.exports = {
+    register: registerPlugin
   };
 })(window.React);

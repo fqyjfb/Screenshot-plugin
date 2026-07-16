@@ -1,6 +1,6 @@
 import { useScreenshotStore, setScreenshotState, updateColor, updateSizeLevel } from './useScreenshotStore';
 
-const { React, api, useAppStore } = window as any;
+const { React } = window as any;
 
 export const Toolbar = () => {
     const { selectionBox, activeTool, color, sizeLevel } = useScreenshotStore();
@@ -35,8 +35,9 @@ export const Toolbar = () => {
     };
 
     const handleExit = () => {
-        api.cancelScreenshot?.();
-        useAppStore?.getState?.()?.setState?.({ activeExtensionPanelId: null });
+        const electron = (window as any).electron;
+        electron?.screenshot?.cancel?.();
+        setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
     };
 
     const renderIcon = (iconName: string) => {
