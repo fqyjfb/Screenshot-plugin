@@ -1,6 +1,6 @@
 {
   "name": "plugin-screenshot",
-  "version": "1.1.0",
+  "version": "1.5.0",
   "description": "原生多显示器截图捕获、标注和裁剪工具",
   "main": "dist/index.js",
   "type": "module",
