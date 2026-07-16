@@ -91,7 +91,8 @@ export const ScreenshotOverlay = () => {
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Escape') {
-            setScreenshotState({ selectionBox: null, texts: [], activeTextId: null });
+            const electron = (window as any).electron;
+            electron?.screenshot?.cancel?.();
         }
     }, []);
 
@@ -127,11 +128,11 @@ export const ScreenshotOverlay = () => {
 
             if (detail === 'copy') {
                 electron?.screenshot?.copyToClipboard?.(dataUrl);
-                setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
             } else if (detail === 'save') {
                 await electron?.screenshot?.save?.({ buffer: dataUrl, format: 'png' });
-                setScreenshotState({ isCapturing: false, selectionBox: null, texts: [], activeTextId: null });
             }
+
+            electron?.screenshot?.complete?.();
         };
 
         document.addEventListener('screenshot-action', handleScreenshotAction);
@@ -147,14 +148,14 @@ export const ScreenshotOverlay = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-50 overflow-hidden" ref={containerRef}>
+        <div className="w-full h-full overflow-hidden" ref={containerRef}>
             <div className="absolute inset-0 bg-black/40" />
             
-            <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="absolute inset-0 flex items-center justify-center">
                 <div className="relative">
                     <canvas
                         ref={canvasRef}
-                        className="block cursor-crosshair rounded-md"
+                        className="block cursor-crosshair"
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}

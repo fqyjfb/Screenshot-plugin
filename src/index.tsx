@@ -1,6 +1,3 @@
-import { setScreenshotState, useScreenshotStore } from './useScreenshotStore';
-import { ScreenshotOverlay } from './ScreenshotOverlay';
-
 const { React, ReactDOM } = window as any;
 
 const PluginHeader: React.FC<{ title: string }> = ({ title }) => {
@@ -49,18 +46,7 @@ const ToolPanel = () => {
         onClick: async () => {
           try {
             const electron = (window as any).electron;
-            const data = await electron?.screenshot?.startCapture?.();
-            if (data && data.captures && data.captures.length > 0) {
-              setScreenshotState({
-                isCapturing: true,
-                captures: data.captures,
-                windowPosition: data.windowPosition,
-                selectionBox: null,
-                texts: [],
-                activeTextId: null,
-                activeTool: 'select'
-              });
-            }
+            await electron?.screenshot?.startCapture?.();
           } catch (error) {
             console.error("Screenshot capture failed:", error);
           }
@@ -76,11 +62,6 @@ const ToolPanel = () => {
 const PluginApp: React.FC = () => {
   const pluginData = (window as any).__PLUGIN_DATA__;
   const title = pluginData?.pluginName || '截图工具';
-  const { isCapturing } = useScreenshotStore();
-
-  if (isCapturing) {
-    return React.createElement(ScreenshotOverlay);
-  }
 
   return React.createElement(React.Fragment, null,
     React.createElement(PluginHeader, { title }),
@@ -133,7 +114,6 @@ function registerPlugin(toolboxApi: any) {
 }
 
 const pluginData = (window as any).__PLUGIN_DATA__;
-
 if (pluginData) {
   renderStandalone();
 }
