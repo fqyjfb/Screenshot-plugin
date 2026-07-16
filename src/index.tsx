@@ -102,7 +102,11 @@ function renderStandalone() {
     return;
   }
 
-  ReactDOM.render(React.createElement(PluginApp), root);
+  if (ReactDOM.createRoot) {
+    ReactDOM.createRoot(root).render(React.createElement(PluginApp));
+  } else {
+    ReactDOM.render(React.createElement(PluginApp), root);
+  }
 }
 
 function registerPlugin(toolboxApi: any) {
