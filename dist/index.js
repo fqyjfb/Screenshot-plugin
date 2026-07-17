@@ -12409,16 +12409,16 @@
   const ToolPanel = () => {
     return React$2.createElement(
       "div",
-      { className: "h-full flex flex-col" },
+      { className: "h-full flex flex-col bg-white dark:bg-gray-800" },
       React$2.createElement(
         "div",
-        { className: "p-4 border-b bg-gray-50" },
-        React$2.createElement("h2", { className: "text-lg font-semibold text-gray-800" }, "截图工具"),
-        React$2.createElement("p", { className: "text-sm text-gray-500 mt-1" }, "点击下方按钮开始截图")
+        { className: "p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" },
+        React$2.createElement("h2", { className: "text-lg font-semibold text-gray-800 dark:text-gray-200" }, "截图工具"),
+        React$2.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400 mt-1" }, "点击下方按钮开始截图")
       ),
       React$2.createElement(
         "div",
-        { className: "flex-1 flex items-center justify-center" },
+        { className: "flex-1 flex items-center justify-center bg-white dark:bg-gray-800" },
         React$2.createElement(
           "button",
           {

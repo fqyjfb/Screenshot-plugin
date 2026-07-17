@@ -2,12 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 const ToolPanel = () => {
-  return React.createElement('div', { className: 'h-full flex flex-col' },
-    React.createElement('div', { className: 'p-4 border-b bg-gray-50' },
-      React.createElement('h2', { className: 'text-lg font-semibold text-gray-800' }, '截图工具'),
-      React.createElement('p', { className: 'text-sm text-gray-500 mt-1' }, '点击下方按钮开始截图')
+  return React.createElement('div', { className: 'h-full flex flex-col bg-white dark:bg-gray-800' },
+    React.createElement('div', { className: 'p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800' },
+      React.createElement('h2', { className: 'text-lg font-semibold text-gray-800 dark:text-gray-200' }, '截图工具'),
+      React.createElement('p', { className: 'text-sm text-gray-500 dark:text-gray-400 mt-1' }, '点击下方按钮开始截图')
     ),
-    React.createElement('div', { className: 'flex-1 flex items-center justify-center' },
+    React.createElement('div', { className: 'flex-1 flex items-center justify-center bg-white dark:bg-gray-800' },
       React.createElement('button', {
         onClick: async () => {
           try {
