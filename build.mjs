@@ -8,21 +8,18 @@ async function runBuild() {
   await build({
     root: __dirname,
     build: {
-      lib: {
-        entry: path.resolve(__dirname, 'src/index.tsx'),
-        name: 'ScreenshotStudioPlugin',
-        formats: ['iife'],
-        fileName: () => 'index.js'
-      },
       outDir: path.resolve(__dirname, 'dist'),
       emptyOutDir: true,
       minify: false,
       rollupOptions: {
-        external: ['react', 'react-dom'],
-        output: { globals: { react: 'window.React', 'react-dom': 'window.ReactDOM' } }
+        input: path.resolve(__dirname, 'src/index.tsx'),
+        output: { 
+          dir: path.resolve(__dirname, 'dist'),
+          format: 'iife',
+          entryFileNames: 'index.js'
+        }
       }
-    },
-    esbuild: { jsxFactory: 'window.React.createElement', jsxFragment: 'window.React.Fragment' }
+    }
   });
   console.log("Build complete: dist/index.js generated.");
 }

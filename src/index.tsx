@@ -1,4 +1,5 @@
-const { React, ReactDOM } = window as any;
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 
 const PluginHeader: React.FC<{ title: string }> = ({ title }) => {
   const handleMinimize = () => {
