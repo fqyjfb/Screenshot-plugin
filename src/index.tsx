@@ -117,7 +117,3 @@ const pluginData = (window as any).__PLUGIN_DATA__;
 if (pluginData) {
   renderStandalone();
 }
-
-module.exports = {
-  register: registerPlugin,
-};

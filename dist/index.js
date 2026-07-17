@@ -113,31 +113,8 @@
       ReactDOM.render(React.createElement(PluginApp), root);
     }
   }
-  function registerPlugin(toolboxApi) {
-    const { registerTool, registerSidebarButton, openPluginWindow } = toolboxApi;
-    registerTool({
-      id: "plugin-screenshot",
-      name: "截图工具",
-      iconName: "Camera",
-      color: "#3b82f6",
-      textColor: "#ffffff",
-      path: "/tools/plugin-screenshot",
-      component: ToolPanel
-    });
-    registerSidebarButton({
-      id: "plugin-screenshot-btn",
-      icon: "Camera",
-      label: "截图工具",
-      onClick: () => {
-        openPluginWindow == null ? void 0 : openPluginWindow("plugin-screenshot");
-      }
-    });
-  }
   const pluginData = window.__PLUGIN_DATA__;
   if (pluginData) {
     renderStandalone();
   }
-  module.exports = {
-    register: registerPlugin
-  };
 })();
