@@ -12406,56 +12406,6 @@
   }
   var clientExports = client.exports;
   const ReactDOM = /* @__PURE__ */ getDefaultExportFromCjs(clientExports);
-  const PluginHeader = ({ title }) => {
-    const handleMinimize = () => {
-      var _a, _b;
-      (_b = (_a = window.electron) == null ? void 0 : _a.plugin) == null ? void 0 : _b.minimizeWindow();
-    };
-    const handleMaximize = () => {
-      var _a, _b;
-      (_b = (_a = window.electron) == null ? void 0 : _a.plugin) == null ? void 0 : _b.maximizeWindow();
-    };
-    const handleClose = () => {
-      var _a, _b;
-      (_b = (_a = window.electron) == null ? void 0 : _a.plugin) == null ? void 0 : _b.closeWindow();
-    };
-    return React$2.createElement(
-      "div",
-      { className: "plugin-header" },
-      React$2.createElement("div", { className: "plugin-header-title" }, title),
-      React$2.createElement(
-        "div",
-        { className: "plugin-header-controls" },
-        React$2.createElement(
-          "button",
-          { onClick: handleMinimize },
-          React$2.createElement(
-            "svg",
-            { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
-            React$2.createElement("path", { d: "M5 12h14" })
-          )
-        ),
-        React$2.createElement(
-          "button",
-          { onClick: handleMaximize },
-          React$2.createElement(
-            "svg",
-            { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
-            React$2.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", ry: "2" })
-          )
-        ),
-        React$2.createElement(
-          "button",
-          { onClick: handleClose },
-          React$2.createElement(
-            "svg",
-            { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
-            React$2.createElement("path", { d: "M18 6L6 18M6 6l12 12" })
-          )
-        )
-      )
-    );
-  };
   const ToolPanel = () => {
     return React$2.createElement(
       "div",
@@ -12489,18 +12439,7 @@
     );
   };
   const PluginApp = () => {
-    const pluginData2 = window.__PLUGIN_DATA__;
-    const title = (pluginData2 == null ? void 0 : pluginData2.pluginName) || "截图工具";
-    return React$2.createElement(
-      React$2.Fragment,
-      null,
-      React$2.createElement(PluginHeader, { title }),
-      React$2.createElement(
-        "div",
-        { className: "plugin-content" },
-        React$2.createElement(ToolPanel)
-      )
-    );
+    return React$2.createElement(ToolPanel);
   };
   function renderStandalone() {
     if (!React$2 || !ReactDOM) {
