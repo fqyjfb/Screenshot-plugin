@@ -1,26 +1,61 @@
 import { build } from 'vite';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const srcDir = path.resolve(__dirname, 'src');
+const distDir = path.resolve(__dirname, 'dist');
 
 async function runBuild() {
+  // Build index.tsx
   await build({
     root: __dirname,
+    base: './',
     build: {
-      outDir: path.resolve(__dirname, 'dist'),
-      emptyOutDir: true,
-      minify: false,
+      outDir: distDir,
+      emptyOutDir: false,
+      minify: true,
       rollupOptions: {
-        input: path.resolve(__dirname, 'src/index.tsx'),
-        output: { 
-          dir: path.resolve(__dirname, 'dist'),
+        input: path.resolve(srcDir, 'index.tsx'),
+        output: {
+          dir: distDir,
           format: 'iife',
-          entryFileNames: 'index.js'
-        }
-      }
-    }
+          entryFileNames: 'index.js',
+        },
+      },
+    },
   });
-  console.log("Build complete: dist/index.js generated.");
+
+  // Build overlay/main.ts
+  await build({
+    root: __dirname,
+    base: './',
+    build: {
+      outDir: distDir,
+      emptyOutDir: false,
+      minify: true,
+      rollupOptions: {
+        input: path.resolve(srcDir, 'overlay', 'main.ts'),
+        output: {
+          dir: distDir,
+          format: 'iife',
+          entryFileNames: 'overlay.js',
+        },
+      },
+    },
+  });
+
+  // Copy static overlay assets to dist/.
+  fs.copyFileSync(
+    path.resolve(srcDir, 'overlay', 'overlay.html'),
+    path.resolve(distDir, 'overlay.html'),
+  );
+  fs.copyFileSync(
+    path.resolve(srcDir, 'overlay', 'overlay.css'),
+    path.resolve(distDir, 'overlay.css'),
+  );
+
+  console.log('Build complete: dist/index.js + dist/overlay.js/html/css generated.');
 }
 runBuild();

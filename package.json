@@ -1,6 +1,6 @@
 {
   "name": "plugin-screenshot",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "截图工具，支持多显示器截图捕获、标注和裁剪",
   "main": "dist/index.js",
   "type": "module",
@@ -8,10 +8,12 @@
     "build": "node build.mjs"
   },
   "dependencies": {
+    "@erase2d/fabric": "^1.2.2",
+    "@types/chroma-js": "^2.4.5",
+    "chroma-js": "^3.2.0",
+    "fabric": "^7.4.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "lucide-react": "^0.454.0",
-    "zustand": "^4.5.0"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

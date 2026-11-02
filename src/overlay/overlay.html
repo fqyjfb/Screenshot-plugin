@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screenshot Overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+  <!-- onData 必须在此处同步注册，早于 did-finish-load；classic script 保证同步执行 -->
+  <script>
+    window.__SHOT_DATA__ = null;
+    window.__ON_DATA_CLEANUP__ = null;
+    window.electron?.screenshot?.onData?.((data) => {
+      window.__SHOT_DATA__ = data;
+      if (typeof window.__BOOTSTRAP__ === 'function') {
+        window.__BOOTSTRAP__(data);
+      }
+    });
+  </script>
+  <div id="overlay_container">
+    <div id="editor">
+      <canvas id="main_photo"></canvas>
+      <canvas id="draw_photo"></canvas>
+      <canvas id="clip_photo"></canvas>
+    </div>
+    <div id="clip_mask"></div>
+    <div id="clip_line"></div>
+    <div id="tool_bar"></div>
+    <div id="draw_bar"></div>
+    <div id="draw_side"></div>
+    <div id="mouse_bar" class="mouse_bar_hide">
+      <div id="point_color"></div>
+      <div id="color_info"></div>
+      <div id="color_palettes"></div>
+    </div>
+    <div id="clip_wh"></div>
+  </div>
+  <script src="overlay.js"></script>
+</body>
+</html>
