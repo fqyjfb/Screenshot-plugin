@@ -46,6 +46,8 @@ const DEFAULT_COLORS = [
 
 class MaskCls extends Rect {
     static override type = 'mask';
+    // fabric 默认不序列化自定义属性，撤销后重建会丢失挖空区域并恢复为可交互对象
+    static override customProperties = ['rect', 'selectable', 'evented'];
     declare rect: { x: number; y: number; w: number; h: number };
     constructor(options?: Partial<Parameters<Rect['setOptions']>[0]>) {
         super();
@@ -63,7 +65,6 @@ class MaskCls extends Rect {
     }
 }
 classRegistry.setClass(MaskCls);
-
 class ArrowCls extends Line {
     static override type = 'arrow';
     override render(ctx: CanvasRenderingContext2D) {
@@ -88,6 +89,8 @@ classRegistry.setClass(ArrowCls);
 
 class XNumberCls extends Circle {
     static override type = 'number';
+    // 序号文字与字号需随画布一起序列化，否则撤销后编号为空
+    static override customProperties = ['txt', 'fontSize'];
     declare fontSize: number;
     declare txt: string;
     constructor(options?: Partial<Parameters<Circle['setOptions']>[0]>) {
@@ -214,23 +217,37 @@ export function initCaptureMode(capture: CaptureData): void {
         rect: RectLike | null;
         canvas: string;
     }
-    const history = new xhistory<HistEntry, HistEntry>([], { rect: null, canvas: '{}' });
+    // 历史里的数据每次都是新克隆对象，引用比较永远不相等，改用序列化比较避免无变化的重复入栈
+    const history = new xhistory<HistEntry, HistEntry>([], { rect: null, canvas: JSON.stringify(fabricCanvas.toJSON()) }, {
+        diff: (last, now) => (JSON.stringify(last) === JSON.stringify(now) ? null : now),
+        apply: (_, diff) => diff,
+    });
 
-    function pushHistory() {
-        const json = fabricCanvas.toJSON();
-        history.setData({ rect: selection, canvas: JSON.stringify(json) }, 'draw');
+    function snapshot(): string {
+        return JSON.stringify(fabricCanvas.toJSON());
+    }
+
+    function pushHistory(des = 'draw') {
+        history.setData({ rect: selection, canvas: snapshot() }, des);
         history.apply();
     }
 
     function doUndo() {
-        const freeMode = mode === 'free' || mode === 'eraser' || mode === 'spray';
-        if (!freeMode && !selection) return;
         if (history.index <= 0) return;
+        // 先清理未提交的临时图形，避免撤销后残留预览/半成品
+        isDrawingShape = false;
+        shapeDrawStart = null;
+        if (tempShape) {
+            fabricCanvas.remove(tempShape);
+            tempShape = null;
+        }
+        resetPoly();
+        mode = 'idle';
         history.undo();
         const entry = history.getData();
+        if (!entry) return;
         selection = entry.rect;
         fabricCanvas.loadFromJSON(entry.canvas, () => fabricCanvas.renderAll());
-        showBars = !!selection;
         refresh();
     }
 
@@ -412,7 +429,7 @@ export function initCaptureMode(capture: CaptureData): void {
             w: snap(Math.abs(x1 - x0)),
             h: snap(Math.abs(y1 - y0)),
         };
-        history.setData({ rect: nr, canvas: fabricCanvas.toJSON() }, 'whEdit');
+        history.setData({ rect: nr, canvas: snapshot() }, 'whEdit');
         history.apply();
         selection = nr;
         refresh();
@@ -642,14 +659,11 @@ export function initCaptureMode(capture: CaptureData): void {
         drawSideEl.innerHTML = '';
         if (item.el) drawSideEl.appendChild(item.el);
         drawSideEl.classList.remove('draw_side_hide');
-        drawBarEl.style.opacity = '1';
-        drawBarEl.style.pointerEvents = 'auto';
     }
     function hideSide() {
+        // 只收起二级面板，绘制工具栏本身需保持可见
         drawSideEl.innerHTML = '';
         drawSideEl.classList.add('draw_side_hide');
-        drawBarEl.style.opacity = '0';
-        drawBarEl.style.pointerEvents = 'none';
     }
 
     // Draw bar buttons
@@ -782,7 +796,8 @@ export function initCaptureMode(capture: CaptureData): void {
             sw.addEventListener('click', () => {
                 if (colorMode === 'stroke') {
                     strokeColor = c;
-                    fabricCanvas.freeDrawingBrush!.color = c;
+                    freeColor = c;
+                    if (fabricCanvas.freeDrawingBrush) fabricCanvas.freeDrawingBrush.color = c;
                 } else {
                     fillColor = c;
                 }
@@ -801,7 +816,8 @@ export function initCaptureMode(capture: CaptureData): void {
             const v = (e.target as HTMLInputElement).value;
             if (colorMode === 'stroke') {
                 strokeColor = v;
-                fabricCanvas.freeDrawingBrush!.color = v;
+                freeColor = v;
+                if (fabricCanvas.freeDrawingBrush) fabricCanvas.freeDrawingBrush.color = v;
             } else {
                 fillColor = v;
             }
@@ -836,8 +852,9 @@ export function initCaptureMode(capture: CaptureData): void {
         slider.style.width = '120px';
         slider.addEventListener('input', () => {
             strokeWidth = Number(slider.value);
+            freeWidth = strokeWidth;
             label.textContent = `线宽: ${strokeWidth}px`;
-            fabricCanvas.freeDrawingBrush!.width = strokeWidth;
+            if (fabricCanvas.freeDrawingBrush) fabricCanvas.freeDrawingBrush.width = strokeWidth;
             fabricCanvas.forEachObject((obj) => {
                 if ('strokeWidth' in obj) obj.set('strokeWidth', strokeWidth);
             });
@@ -874,14 +891,18 @@ export function initCaptureMode(capture: CaptureData): void {
     }
 
     function doCopy() {
-        pushHistory();
-        renderComposite((dataUrl) => safeIpc.copyToClipboard(dataUrl));
+        renderComposite((dataUrl) => {
+            safeIpc.copyToClipboard(dataUrl);
+            safeIpc.complete();
+        });
     }
 
     function doSave() {
-        pushHistory();
         renderComposite((dataUrl) => {
-            safeIpc.save({ buffer: dataUrl, format: 'png' }).then(() => safeIpc.complete());
+            safeIpc.save({ buffer: dataUrl, format: 'png' }).then((res) => {
+                // 只有真正写入文件后才结束会话；取消对话框应回到标注状态
+                if (res?.success) safeIpc.complete();
+            });
         });
     }
 
@@ -964,8 +985,7 @@ export function initCaptureMode(capture: CaptureData): void {
 
     function commitRect(r: RectLike, des = 'move') {
         selection = r;
-        history.setData({ rect: r, canvas: fabricCanvas.toJSON() }, des);
-        history.apply();
+        pushHistory(des);
         refresh();
     }
 
@@ -1285,6 +1305,7 @@ export function initCaptureMode(capture: CaptureData): void {
             const h = Math.abs(py - shapeDrawStart.y);
             if (w > 3 && h > 3) {
                 createShape(currentTool, shapeDrawStart.x, shapeDrawStart.y, px, py);
+                pushHistory();
             }
             shapeDrawStart = null;
             mode = 'idle';
